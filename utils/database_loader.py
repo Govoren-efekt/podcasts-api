@@ -71,7 +71,7 @@ def create_and_populate_tables(podcasts, artists, genres, genres_podcasts):
                                   Column('genreId', Integer, primary_key=True))
     metadata.create_all(engine)
     genres_podcasts.to_sql('genres_podcasts', con=engine, if_exists='append', index=False)
-
+#
 
 top_100_podcasts = fetch_json()
 podcasts, artists, genres, genres_podcasts = get_dfs(top_100_podcasts)
