@@ -49,7 +49,7 @@ def create_and_populate_tables(podcasts, genres, genres_podcasts):
           Column('name', String(200)),
           Column('kind', String(100)),
           Column('copyright', String(300)),
-          Column('artistId', Integer),
+          Column('artistId', String(100)),
           Column('contentAdvisoryRating', String(100), nullable=True),
           Column('artistUrl', String(1000)),
           Column('artworkUrl100', String(1000)),

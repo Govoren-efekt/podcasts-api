@@ -23,8 +23,11 @@ class Podcast(Resource):
                          autoload_with=engine)
         stmt = select([podcasts])
         results = connection.execute(stmt).fetchall()
+        print(results)
         podcasts_df = pd.DataFrame(results)
         podcasts_df.columns = results[0].keys()
+
+        print(podcasts_df[0:2])
         podcasts_dict = podcasts_df.to_dict(orient='records')
 
         print(podcasts_dict)
