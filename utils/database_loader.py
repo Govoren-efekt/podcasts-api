@@ -1,7 +1,7 @@
 import requests
 import pandas as pd
-from random import randint
 from sqlalchemy import create_engine, MetaData, Table, Integer, String, Column, ForeignKey, Date
+import os
 
 
 def fetch_json():
@@ -66,6 +66,10 @@ def create_and_populate_tables(podcasts, genres, genres_podcasts):
     genres_podcasts.to_sql('genres_podcasts', con=engine, if_exists='append', index=False)
 
 
-top_100_podcasts = fetch_json()
-podcasts, genres, genres_podcasts = get_dfs(top_100_podcasts)
-create_and_populate_tables(podcasts, genres, genres_podcasts)
+def populate_db():
+    if 'itunes_db.sqlite' not in os.listdir():
+        print('populating db...')
+        top_100_podcasts = fetch_json()
+        podcasts, genres, genres_podcasts = get_dfs(top_100_podcasts)
+        create_and_populate_tables(podcasts, genres, genres_podcasts)
+        print('db was populated succesfully!')
