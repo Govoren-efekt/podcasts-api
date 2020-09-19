@@ -42,6 +42,7 @@ def create_and_populate_tables(podcasts, genres, genres_podcasts):
 
     # Podcasts
     Table('podcasts', metadata,
+          Column('index', Integer),
           Column('artistName', String(400)),
           Column('id', Integer, primary_key=True),
           Column('releaseDate', Date),
@@ -61,9 +62,9 @@ def create_and_populate_tables(podcasts, genres, genres_podcasts):
 
     metadata.create_all(engine)
     # Inserting dataframes in their corresponding tables
-    podcasts.to_sql('podcasts', con=engine, if_exists='append', index=False)
-    genres.to_sql('genres', con=engine, if_exists='append', index=False)
-    genres_podcasts.to_sql('genres_podcasts', con=engine, if_exists='append', index=False)
+    podcasts.to_sql('podcasts', con=engine, if_exists='append')
+    genres.to_sql('genres', con=engine, if_exists='append', index=False, method="multi")
+    genres_podcasts.to_sql('genres_podcasts', con=engine, if_exists='append', index=False, method="multi")
 
 
 def populate_db():
