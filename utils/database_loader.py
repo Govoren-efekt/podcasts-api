@@ -1,20 +1,13 @@
 import requests
 import pandas as pd
 from random import randint
-from sqlalchemy import create_engine, MetaData, Table, Integer, String, Column
+from sqlalchemy import create_engine, MetaData, Table, Integer, String, Column, ForeignKey, Date
 
 
 def fetch_json():
     response = requests.get('https://rss.itunes.apple.com/api/v1/us/podcasts/top-podcasts/all/100/explicit.json')
     response = response.json()
     return response['feed']['results']
-
-
-def create_artist_id(ids, min_id, max_id):
-    while True:
-        artist_id = randint(min_id, max_id)
-        if artist_id not in ids:
-            return artist_id
 
 
 def get_dfs(data):
@@ -24,12 +17,6 @@ def get_dfs(data):
         'genreId': []
     }
 
-    artists_dict = {
-        'artistId': [],
-        'artistName': [],
-        'artistUrl': []
-    }
-    current_artists_ids = [int(element['artistId']) for element in data if 'artistId' in element]
     for row in data:
         for genreDict in row['genres']:
             # Extract genres
@@ -37,44 +24,48 @@ def get_dfs(data):
             genres_podcasts_dict['podcastId'].append(row['id'])
             genres_podcasts_dict['genreId'].append(genreDict['genreId'])
 
-        artists_dict['artistName'].append(row['artistName'])
-        if 'artistId' not in row:
-            min_id = min(current_artists_ids)
-            max_id = max(current_artists_ids)
-            new_id = create_artist_id(current_artists_ids, min_id, max_id)
-            current_artists_ids.append(new_id)
-            row['artistId'] = new_id
-
-        artists_dict['artistId'].append(row['artistId'])
-
-        if 'artistUrl' not in row:
-            artists_dict['artistUrl'].append('')
-
-        else:
-            artists_dict['artistUrl'].append(row['artistUrl'])
-
-    podcasts = pd.DataFrame(data)
-    podcasts_df = podcasts.drop(['artistName', 'artistUrl', 'genres'], axis=1)
+    podcasts_df = pd.DataFrame(data)
+    podcasts_df = podcasts_df.drop(['genres'], axis=1)
     genres_df = pd.DataFrame(genres_list)
     genres_df = genres_df.drop_duplicates()
     genres_podcasts_df = pd.DataFrame(genres_podcasts_dict)
-    artists_df = pd.DataFrame(artists_dict)
-    artists_df = artists_df.drop_duplicates(subset='artistName')
-    return podcasts_df, artists_df, genres_df, genres_podcasts_df
+    return podcasts_df, genres_df, genres_podcasts_df
 
 
-def create_and_populate_tables(podcasts, artists, genres, genres_podcasts):
+def create_and_populate_tables(podcasts, genres, genres_podcasts):
     engine = create_engine('sqlite:///itunes_db.sqlite')
     metadata = MetaData()
-    genres_podcasts_table = Table('genres_podcasts', metadata,
-                                  Column('podcastId', Integer, primary_key=True),
-                                  Column('genreId', Integer, primary_key=True))
+
+    # genres
+    Table('genres', metadata, Column('genreId', Integer, primary_key=True), Column('name', String(200)),
+          Column('url', String(1000)))
+
+    # Podcasts
+    Table('podcasts', metadata,
+          Column('artistName', String(400)),
+          Column('id', Integer, primary_key=True),
+          Column('releaseDate', Date),
+          Column('name', String(200)),
+          Column('kind', String(100)),
+          Column('copyright', String(300)),
+          Column('artistId', Integer),
+          Column('contentAdvisoryRating', String(100), nullable=True),
+          Column('artistUrl', String(1000)),
+          Column('artworkUrl100', String(1000)),
+          Column('url', String(1000), nullable=True))
+
+    # Genres Podcasts
+    Table('genres_podcasts', metadata,
+          Column('podcastId', Integer, ForeignKey('podcasts.id'), primary_key=True),
+          Column('genreId', Integer, ForeignKey('genres.genreId'), primary_key=True))
+
     metadata.create_all(engine)
+    # Inserting dataframes in their corresponding tables
+    podcasts.to_sql('podcasts', con=engine, if_exists='append', index=False)
+    genres.to_sql('genres', con=engine, if_exists='append', index=False)
     genres_podcasts.to_sql('genres_podcasts', con=engine, if_exists='append', index=False)
-#
+
 
 top_100_podcasts = fetch_json()
-podcasts, artists, genres, genres_podcasts = get_dfs(top_100_podcasts)
-create_and_populate_tables(podcasts, artists, genres, genres_podcasts)
-
-# print(engine.execute('SELECT * FROM genres_podcasts').fetchall())
+podcasts, genres, genres_podcasts = get_dfs(top_100_podcasts)
+create_and_populate_tables(podcasts, genres, genres_podcasts)
