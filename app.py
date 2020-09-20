@@ -1,11 +1,17 @@
-from flask import Flask, request, jsonify, abort
+from flask import Flask, request, jsonify, make_response
 from utils.database_loader import populate_db
 import json
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 import os
+from werkzeug.security import generate_password_hash, check_password_hash
+import uuid
+import jwt
+import datetime
+from functools import wraps
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = 'thisissecret'
 
 # Create folder for storing the json outputs.
 if 'json_outputs' not in os.listdir():
@@ -27,7 +33,39 @@ genre_podcast = db.Table('genre_podcast',
                          db.Column('genreId', db.Integer, db.ForeignKey('genre.genreId')))
 
 
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = None
+
+        if 'x-access-token' in request.headers:
+            token = request.headers['x-access-token']
+
+        if not token:
+            return jsonify({'message': 'Token is missing!'}), 401
+
+        try:
+            data = jwt.decode(token, app.config['SECRET_KEY'])
+            current_user = User.query.filter_by(public_id=data['public_id']).first()
+        except:
+            return jsonify({'message': 'Token is invalid!'}), 401
+
+        return f(current_user, *args, **kwargs)
+
+    return decorated
+
+
+
+
 # Models
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    public_id = db.Column(db.String(50), unique=True)
+    name = db.Column(db.String(50))
+    password = db.Column(db.String(80))
+
+
+
 class Genre(db.Model):
     genreId = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100))
@@ -80,8 +118,44 @@ podcasts_schema = PodcastSchema(many=True)
 podcast_by_genre = PodcastByGenreSchema()
 
 
+@app.route('/user', methods=['POST'])
+def create_user():
+    data = request.get_json()
+
+    hashed_password = generate_password_hash(data['password'], method='sha256')
+
+    new_user = User(public_id=str(uuid.uuid4()), name=data['name'], password=hashed_password)
+    db.session.add(new_user)
+    db.session.commit()
+
+    return jsonify({'message': 'New user created!'})
+
+
+@app.route('/login')
+def login():
+    auth = request.authorization
+
+    if not auth or not auth.username or not auth.password:
+        return make_response('Could not verify', 401, {'WWW-Authenticate': 'Basic realm="Login required!"'})
+
+    user = User.query.filter_by(name=auth.username).first()
+
+    if not user:
+        return make_response('Could not verify', 401, {'WWW-Authenticate': 'Basic realm="Login required!"'})
+
+    if check_password_hash(user.password, auth.password):
+        token = jwt.encode(
+            {'public_id': user.public_id, 'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=30)},
+            app.config['SECRET_KEY'])
+
+        return jsonify({'token': token.decode('UTF-8')})
+
+    return make_response('Could not verify', 401, {'WWW-Authenticate': 'Basic realm="Login required!"'})
+
+
 @app.route('/api', methods=['POST'])
-def search_lookup():
+@token_required
+def search_lookup(current_user):
     if 'name' not in request.json.keys() or not isinstance(request.json['name'], str):
         return {'message': 'name string field is required'}, 400
     name = request.json['name']
@@ -94,18 +168,20 @@ def search_lookup():
 
 
 @app.route('/api/top20', methods=['GET'])
-def store_top_20():
+@token_required
+def store_top_20(current_user):
     top_20 = Podcast.query.order_by(Podcast.index).limit(20).all()
     result = podcasts_schema.dump(top_20)
     with open('json_outputs/top_20.json', 'w') as json_file:
         json.dump(result, json_file)
 
     return {'message': 'Top 20 podcasts'
-                       'had been written in: json_outputs/top_20.json'}, 200
+                       ' had been written in: json_outputs/top_20.json'}, 200
 
 
 @app.route('/api/swap', methods=['GET'])
-def swap_top_bottom():
+@token_required
+def swap_top_bottom(current_user):
     sorted_podcast = Podcast.query.order_by(Podcast.index).all()
     top_20 = sorted_podcast[:20]
     bottom_20 = sorted_podcast[-20:]
@@ -119,7 +195,8 @@ def swap_top_bottom():
 
 
 @app.route('/api/<id>', methods=['DELETE'])
-def delete_podcast(id):
+@token_required
+def delete_podcast(current_user,id):
     podcast = Podcast.query.get(id)
     if podcast is None:
         return {'message': f'Podcast with id: {id} does not exists.'}, 404
@@ -129,7 +206,8 @@ def delete_podcast(id):
 
 
 @app.route('/api/grouped', methods=['GET'])
-def podcasts_by_genres():
+@token_required
+def podcasts_by_genres(current_user):
     raw_query = (""" 
         SELECT genre.name,
         p.id

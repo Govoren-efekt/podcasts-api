@@ -50,6 +50,11 @@ def create_and_populate_tables(podcasts, genres, genres_podcasts):
     engine = create_engine('sqlite:///itunes_db.sqlite')
     metadata = MetaData()
 
+    # user
+
+    Table('user', metadata, Column('id', Integer, primary_key=True), Column('public_id', String(50), unique=True),
+          Column('name', String(50)), Column('password', String(80)))
+
     # genres
     Table('genre', metadata, Column('genreId', Integer, primary_key=True), Column('name', String(200)),
           Column('url', String(1000)))
