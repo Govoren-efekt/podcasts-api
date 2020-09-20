@@ -6,6 +6,7 @@
 - Preferably, activate a virtual environment
 - Install the dependencies
 ```shell script
+cd podcasts-api/
 pip3 install -r requirements.txt
 ```
 ## Running the code
