@@ -53,7 +53,7 @@ class PodcastSchema(ma.Schema):
     genres = ma.Nested(GenreSchema, many=True)
 
     class Meta:
-        fields = ('index', 'artistName', 'id',
+        fields = ('artistName', 'id',
                   'releaseDate', 'name', 'kind', 'copyright', 'artistId',
                   'contentAdvisoryRating', 'artistUrl', 'artworkUrl100', 'url', 'genres')
 
@@ -68,6 +68,24 @@ def search_lookup():
     name = request.json['name']
     all_podcasts = Podcast.query.filter(Podcast.name.like('%' + name.lower() + '%')).all()
     result = podcasts_schema.dump(all_podcasts)
+    return jsonify(result)
+
+
+@app.route('/api', methods=['GET'])
+def store_top_20():
+    top_20 = Podcast.query.order_by(Podcast.index).limit(20).all()
+    result = podcasts_schema.dump(top_20)
+    return jsonify(result)
+
+
+@app.route('/api/swap', methods=['GET'])
+def swap_top_bottom():
+    sorted_podcast = Podcast.query.order_by(Podcast.index).all()
+    top_20 = sorted_podcast[:20]
+    bottom_20 = sorted_podcast[-20:]
+    sorted_podcast[:20] = bottom_20
+    sorted_podcast[-20:] = top_20
+    result = podcasts_schema.dump(sorted_podcast)
     return jsonify(result)
 
 
