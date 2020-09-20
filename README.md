@@ -9,7 +9,7 @@
 cd podcasts-api/
 pip3 install -r requirements.txt
 ```
-In case you have trouble using``requirements.txt```, you can always install the
+In case you have trouble using `requirements.txt`, you can always install the
 modules individually:
 ```shell script
 pip3 install requests
