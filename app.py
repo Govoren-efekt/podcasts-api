@@ -1,8 +1,7 @@
 from flask import Flask, request, jsonify
 from utils.database_loader import populate_db
-import pandas as pd
+import json
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.ext.automap import automap_base
 from flask_marshmallow import Marshmallow
 
 app = Flask(__name__)
@@ -86,7 +85,10 @@ def swap_top_bottom():
     sorted_podcast[:20] = bottom_20
     sorted_podcast[-20:] = top_20
     result = podcasts_schema.dump(sorted_podcast)
-    return jsonify(result)
+    with open('json_outputs/swapped_top_bottom.json', 'w') as json_file:
+        json.dump(result, json_file)
+    return {'message': 'Swapped JSON of top 20 - bottom 20 '
+                       'has been written in: json_outputs/swapped_top_bottom.json '}, 200
 
 
 if __name__ == '__main__':
