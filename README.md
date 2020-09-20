@@ -9,6 +9,18 @@
 cd podcasts-api/
 pip3 install -r requirements.txt
 ```
+In case you have trouble installing ```requirements.txt```, you can install the
+modules individually:
+```shell script
+pip3 install requests
+pip3 install pandas
+pip3 install SQLAlchemy
+pip3 install flask
+pip3 install flask_sqlalchemy
+pip3 install flask_marshmallow
+pip3 install marshmallow-sqlalchemy
+```
+
 ## Running the code
 Type in the terminal
 ```shell script
