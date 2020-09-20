@@ -1,10 +1,10 @@
 from flask import Flask, request, jsonify
+from flask_restful import abort
 from utils.database_loader import populate_db
 import json
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 import os
-from sqlalchemy import text
 
 app = Flask(__name__)
 
@@ -64,7 +64,7 @@ class PodcastSchema(ma.Schema):
                   'contentAdvisoryRating', 'artistUrl', 'artworkUrl100', 'url', 'genres')
 
 
-class PodcastSchema2(ma.Schema):
+class PodcastByGenreSchema(ma.Schema):
     class Meta:
         fields = ('artistName', 'id',
                   'releaseDate', 'name', 'kind', 'copyright', 'artistId',
@@ -74,8 +74,8 @@ class PodcastSchema2(ma.Schema):
 # Init Schemas
 genres_schema = GenreSchema(many=True)
 podcast_schema = PodcastSchema()
-podcast_schema2 = PodcastSchema2()
 podcasts_schema = PodcastSchema(many=True)
+podcast_by_genre = PodcastByGenreSchema()
 
 
 @app.route('/api', methods=['POST'])
@@ -112,8 +112,10 @@ def swap_top_bottom():
 
 
 @app.route('/api/<id>', methods=['DELETE'])
-def delete_product(id):
+def delete_podcast(id):
     podcast = Podcast.query.get(id)
+    if podcast is None:
+        abort(404, message='Podcast does not exists.')
     db.session.delete(podcast)
     db.session.commit()
     return {'message': f'podcast with id {id} was deleted successfully.'}, 200
@@ -123,11 +125,11 @@ def delete_product(id):
 def podcasts_by_genres():
     raw_query = (""" 
         SELECT genre.name,
-       p.id
-FROM genre
-         JOIN genre_podcast gp on genre.genreId = gp.genreId
-         JOIN podcast p on gp.id = p.id
-order by genre.name;
+        p.id
+        FROM genre
+        JOIN genre_podcast gp ON genre.genreId = gp.genreId
+        JOIN podcast p ON gp.id = p.id
+        ORDER BY genre.name;
     
     """)
     results = db.engine.execute(raw_query).fetchall()
@@ -136,9 +138,8 @@ order by genre.name;
         if r[0] not in genres_dict.keys():
             genres_dict[r[0]] = []
         podcast_list = Podcast.query.get(r[1])
-        podcast_list = podcast_schema2.dump(podcast_list)
+        podcast_list = podcast_by_genre.dump(podcast_list)
         genres_dict[r[0]].append(podcast_list)
-        # genres_dict[r[0]].append(r[1:])
     print(genres_dict)
     return genres_dict
 
