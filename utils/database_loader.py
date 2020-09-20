@@ -13,7 +13,7 @@ def fetch_json():
 def get_dfs(data):
     genres_list = []
     genres_podcasts_dict = {
-        'podcastId': [],
+        'id': [],
         'genreId': []
     }
 
@@ -21,7 +21,7 @@ def get_dfs(data):
         for genreDict in row['genres']:
             # Extract genres
             genres_list.append(genreDict)
-            genres_podcasts_dict['podcastId'].append(row['id'])
+            genres_podcasts_dict['id'].append(row['id'])
             genres_podcasts_dict['genreId'].append(genreDict['genreId'])
 
     podcasts_df = pd.DataFrame(data)
@@ -37,11 +37,11 @@ def create_and_populate_tables(podcasts, genres, genres_podcasts):
     metadata = MetaData()
 
     # genres
-    Table('genres', metadata, Column('genreId', Integer, primary_key=True), Column('name', String(200)),
+    Table('genre', metadata, Column('genreId', Integer, primary_key=True), Column('name', String(200)),
           Column('url', String(1000)))
 
     # Podcasts
-    Table('podcasts', metadata,
+    Table('podcast', metadata,
           Column('index', Integer),
           Column('artistName', String(400)),
           Column('id', Integer, primary_key=True),
@@ -56,15 +56,15 @@ def create_and_populate_tables(podcasts, genres, genres_podcasts):
           Column('url', String(1000), nullable=True))
 
     # Genres Podcasts
-    Table('genres_podcasts', metadata,
-          Column('podcastId', Integer, ForeignKey('podcasts.id'), primary_key=True),
-          Column('genreId', Integer, ForeignKey('genres.genreId'), primary_key=True))
+    Table('genre_podcast', metadata,
+          Column('id', Integer, ForeignKey('podcast.id'), primary_key=True),
+          Column('genreId', Integer, ForeignKey('genre.genreId'), primary_key=True))
 
     metadata.create_all(engine)
     # Inserting dataframes in their corresponding tables
-    podcasts.to_sql('podcasts', con=engine, if_exists='append')
-    genres.to_sql('genres', con=engine, if_exists='append', index=False)
-    genres_podcasts.to_sql('genres_podcasts', con=engine, if_exists='append', index=False)
+    podcasts.to_sql('podcast', con=engine, if_exists='append')
+    genres.to_sql('genre', con=engine, if_exists='append', index=False)
+    genres_podcasts.to_sql('genre_podcast', con=engine, if_exists='append', index=False)
 
 
 def populate_db():
