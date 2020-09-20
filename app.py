@@ -63,9 +63,10 @@ genres_schema = GenreSchema(many=True)
 podcasts_schema = PodcastSchema(many=True)
 
 
-@app.route('/api', methods=['GET'])
-def hello_world():
-    all_podcasts = Podcast.query.all()
+@app.route('/api', methods=['POST'])
+def search_lookup():
+    name = request.json['name']
+    all_podcasts = Podcast.query.filter(Podcast.name.like('%' + name.lower() + '%')).all()
     result = podcasts_schema.dump(all_podcasts)
     return jsonify(result)
 
