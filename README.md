@@ -9,7 +9,7 @@
 cd podcasts-api/
 pip3 install -r requirements.txt
 ```
-In case you have trouble installing ```requirements.txt```, you can install the
+In case you have trouble using``requirements.txt```, you can always install the
 modules individually:
 ```shell script
 pip3 install requests
@@ -19,6 +19,7 @@ pip3 install flask
 pip3 install flask_sqlalchemy
 pip3 install flask_marshmallow
 pip3 install marshmallow-sqlalchemy
+pip3 install jwt
 ```
 
 ## Running the code

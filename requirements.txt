@@ -5,3 +5,4 @@ Flask
 flask_sqlalchemy
 flask_marshmallow
 marshmallow-sqlalchemy
+jwt
