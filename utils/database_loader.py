@@ -5,12 +5,20 @@ import os
 
 
 def fetch_json():
+    """
+    :return: top 100 podcasts fetched from url
+    """
     response = requests.get('https://rss.itunes.apple.com/api/v1/us/podcasts/top-podcasts/all/100/explicit.json')
     response = response.json()
     return response['feed']['results']
 
 
 def get_dfs(data):
+    """
+
+    :param data: top 100 podcasts raw data
+    :return: genres, podcasts and genres_podcasts pandas dataframes
+    """
     genres_list = []
     genres_podcasts_dict = {
         'id': [],
@@ -33,6 +41,12 @@ def get_dfs(data):
 
 
 def create_and_populate_tables(podcasts, genres, genres_podcasts):
+    """
+
+    :param podcasts: podcasts dataframe
+    :param genres: genres dataframe
+    :param genres_podcasts: genres podcasts intermediate table
+    """
     engine = create_engine('sqlite:///itunes_db.sqlite')
     metadata = MetaData()
 
@@ -67,6 +81,7 @@ def create_and_populate_tables(podcasts, genres, genres_podcasts):
     genres_podcasts.to_sql('genre_podcast', con=engine, if_exists='append', index=False)
 
 
+# Main function for creating and populating DB automatically
 def populate_db():
     print('populating db...')
     top_100_podcasts = fetch_json()

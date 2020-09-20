@@ -1,5 +1,4 @@
-from flask import Flask, request, jsonify
-from flask_restful import abort
+from flask import Flask, request, jsonify, abort
 from utils.database_loader import populate_db
 import json
 from flask_sqlalchemy import SQLAlchemy
@@ -8,13 +7,15 @@ import os
 
 app = Flask(__name__)
 
+# Create folder for storing the json outputs.
 if 'json_outputs' not in os.listdir():
     os.mkdir('json_outputs')
 
-# DB creation
+# Create db if doesn't exists
 if 'itunes_db.sqlite' not in os.listdir():
     populate_db()
 
+# App configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///itunes_db.sqlite'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
@@ -64,6 +65,7 @@ class PodcastSchema(ma.Schema):
                   'contentAdvisoryRating', 'artistUrl', 'artworkUrl100', 'url', 'genres')
 
 
+# Schema created to avoid showing genre column when grouping podcasts by genre
 class PodcastByGenreSchema(ma.Schema):
     class Meta:
         fields = ('artistName', 'id',
@@ -80,10 +82,15 @@ podcast_by_genre = PodcastByGenreSchema()
 
 @app.route('/api', methods=['POST'])
 def search_lookup():
+    if 'name' not in request.json.keys() or not isinstance(request.json['name'], str):
+        return {'message': 'name string field is required'}, 400
     name = request.json['name']
     all_podcasts = Podcast.query.filter(Podcast.name.like('%' + name.lower() + '%')).all()
     result = podcasts_schema.dump(all_podcasts)
-    return jsonify(result)
+    if len(result) > 0:
+        return jsonify(result)
+    else:
+        return {'message': 'No matches for that name.'}, 404
 
 
 @app.route('/api/top20', methods=['GET'])
@@ -115,7 +122,7 @@ def swap_top_bottom():
 def delete_podcast(id):
     podcast = Podcast.query.get(id)
     if podcast is None:
-        abort(404, message='Podcast does not exists.')
+        return {'message': f'Podcast with id: {id} does not exists.'}, 404
     db.session.delete(podcast)
     db.session.commit()
     return {'message': f'podcast with id {id} was deleted successfully.'}, 200
