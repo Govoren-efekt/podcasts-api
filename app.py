@@ -70,11 +70,15 @@ def search_lookup():
     return jsonify(result)
 
 
-@app.route('/api', methods=['GET'])
+@app.route('/api/top20', methods=['GET'])
 def store_top_20():
     top_20 = Podcast.query.order_by(Podcast.index).limit(20).all()
     result = podcasts_schema.dump(top_20)
-    return jsonify(result)
+    with open('json_outputs/top_20.json', 'w') as json_file:
+        json.dump(result, json_file)
+
+    return {'message': 'Top 20 podcasts'
+                       'had been written in: json_outputs/top_20.json'}, 200
 
 
 @app.route('/api/swap', methods=['GET'])
@@ -87,7 +91,7 @@ def swap_top_bottom():
     result = podcasts_schema.dump(sorted_podcast)
     with open('json_outputs/swapped_top_bottom.json', 'w') as json_file:
         json.dump(result, json_file)
-    return {'message': 'Swapped JSON of top 20 - bottom 20 '
+    return {'message': 'Swapped JSON of top 20  bottom 20 '
                        'has been written in: json_outputs/swapped_top_bottom.json '}, 200
 
 
