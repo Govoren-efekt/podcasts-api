@@ -68,9 +68,8 @@ def create_and_populate_tables(podcasts, genres, genres_podcasts):
 
 
 def populate_db():
-    if 'itunes_db.sqlite' not in os.listdir():
-        print('populating db...')
-        top_100_podcasts = fetch_json()
-        podcasts, genres, genres_podcasts = get_dfs(top_100_podcasts)
-        create_and_populate_tables(podcasts, genres, genres_podcasts)
-        print('db was populated succesfully!')
+    print('populating db...')
+    top_100_podcasts = fetch_json()
+    podcasts, genres, genres_podcasts = get_dfs(top_100_podcasts)
+    create_and_populate_tables(podcasts, genres, genres_podcasts)
+    print('db was populated succesfully!')

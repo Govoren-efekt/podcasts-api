@@ -3,10 +3,17 @@ from utils.database_loader import populate_db
 import json
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
+import os
 
 app = Flask(__name__)
 
-populate_db()
+if 'json_outputs' not in os.listdir():
+    os.mkdir('json_outputs')
+
+# DB creation
+if 'itunes_db.sqlite' not in os.listdir():
+    populate_db()
+
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///itunes_db.sqlite'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
@@ -59,6 +66,7 @@ class PodcastSchema(ma.Schema):
 
 # Init Schemas
 genres_schema = GenreSchema(many=True)
+podcast_schema = PodcastSchema()
 podcasts_schema = PodcastSchema(many=True)
 
 
@@ -93,6 +101,14 @@ def swap_top_bottom():
         json.dump(result, json_file)
     return {'message': 'Swapped JSON of top 20  bottom 20 '
                        'has been written in: json_outputs/swapped_top_bottom.json '}, 200
+
+
+@app.route('/api/<id>', methods=['DELETE'])
+def delete_product(id):
+    podcast = Podcast.query.get(id)
+    db.session.delete(podcast)
+    db.session.commit()
+    return podcast_schema.jsonify(podcast)
 
 
 if __name__ == '__main__':
