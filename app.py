@@ -4,6 +4,7 @@ import json
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 import os
+from sqlalchemy import text
 
 app = Flask(__name__)
 
@@ -17,7 +18,6 @@ if 'itunes_db.sqlite' not in os.listdir():
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///itunes_db.sqlite'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
-
 ma = Marshmallow(app)
 
 # Many-to-many intermediate table
@@ -64,9 +64,17 @@ class PodcastSchema(ma.Schema):
                   'contentAdvisoryRating', 'artistUrl', 'artworkUrl100', 'url', 'genres')
 
 
+class PodcastSchema2(ma.Schema):
+    class Meta:
+        fields = ('artistName', 'id',
+                  'releaseDate', 'name', 'kind', 'copyright', 'artistId',
+                  'contentAdvisoryRating', 'artistUrl', 'artworkUrl100', 'url')
+
+
 # Init Schemas
 genres_schema = GenreSchema(many=True)
 podcast_schema = PodcastSchema()
+podcast_schema2 = PodcastSchema2()
 podcasts_schema = PodcastSchema(many=True)
 
 
@@ -108,7 +116,31 @@ def delete_product(id):
     podcast = Podcast.query.get(id)
     db.session.delete(podcast)
     db.session.commit()
-    return podcast_schema.jsonify(podcast)
+    return {'message': f'podcast with id {id} was deleted successfully.'}, 200
+
+
+@app.route('/api/grouped', methods=['GET'])
+def podcasts_by_genres():
+    raw_query = (""" 
+        SELECT genre.name,
+       p.id
+FROM genre
+         JOIN genre_podcast gp on genre.genreId = gp.genreId
+         JOIN podcast p on gp.id = p.id
+order by genre.name;
+    
+    """)
+    results = db.engine.execute(raw_query).fetchall()
+    genres_dict = {}
+    for r in results:
+        if r[0] not in genres_dict.keys():
+            genres_dict[r[0]] = []
+        podcast_list = Podcast.query.get(r[1])
+        podcast_list = podcast_schema2.dump(podcast_list)
+        genres_dict[r[0]].append(podcast_list)
+        # genres_dict[r[0]].append(r[1:])
+    print(genres_dict)
+    return genres_dict
 
 
 if __name__ == '__main__':
